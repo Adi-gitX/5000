@@ -1,0 +1,3 @@
+id,business_name,niche,city,website,email,linkedin_url,pain_signal,owner,source,processed_at
+LI-20260228121000-001,Glow Med Spa,med spa,Austin,https://glow.example,owner+glow@example.com,https://linkedin.com/company/glow-med-spa,No clear online booking CTA,ops@example.com,google_maps,
+LI-20260228121000-002,Riverfront Dental,dental,Dallas,https://riverfront.example,ops+riverfront@example.com,https://linkedin.com/company/riverfront-dental,No rapid callback claim on website,ops@example.com,google_maps,

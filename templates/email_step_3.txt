@@ -1,0 +1,14 @@
+Subject: Last note on reactivation for {{BUSINESS_NAME}}
+
+Hi {{BUSINESS_NAME}} team,
+
+Last note from me.
+If recovering unworked leads is a priority this month, this is the direct booking link:
+{{CALENDLY_LINK}}
+
+If you prefer to start directly, deposit link:
+{{STRIPE_DEPOSIT_LINK}}
+
+Reply STOP to opt out.
+
+- {{OFFER_NAME}}

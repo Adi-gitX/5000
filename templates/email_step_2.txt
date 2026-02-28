@@ -1,0 +1,13 @@
+Subject: Follow-up: missed lead recovery for {{BUSINESS_NAME}}
+
+Hi {{BUSINESS_NAME}} team,
+
+Quick follow-up in case this got buried.
+We typically recover booked consults from old lead lists in the first 14 days.
+
+If useful, pick a slot here:
+{{CALENDLY_LINK}}
+
+Reply STOP to opt out.
+
+- {{OFFER_NAME}}

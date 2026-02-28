@@ -1,0 +1,3 @@
+Hi {{BUSINESS_NAME}} - quick note.
+I help med spas and dental clinics reactivate old leads and convert missed callbacks into booked consults.
+If this is relevant, happy to send a 2-minute breakdown and a fit-check link.

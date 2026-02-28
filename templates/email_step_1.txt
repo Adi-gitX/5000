@@ -1,0 +1,13 @@
+Subject: Quick idea to recover missed {{NICHE}} leads for {{BUSINESS_NAME}}
+
+Hi {{BUSINESS_NAME}} team,
+
+I noticed {{PAIN_SIGNAL}}.
+I run a 14-day sprint that reactivates old leads and routes hot replies straight to your booking flow.
+
+Would you be open to a quick 15-minute fit check this week?
+{{CALENDLY_LINK}}
+
+If not relevant, reply STOP and I will not follow up.
+
+- {{OFFER_NAME}}

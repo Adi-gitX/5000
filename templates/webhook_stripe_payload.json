@@ -1,0 +1,11 @@
+{
+  "webhook_token": "replace-with-settings-token",
+  "event_id": "evt_1ABCDEF",
+  "payment_id": "pi_3XYZ",
+  "deal_id": "DL-20260228120100-1001",
+  "prospect_id": "PR-20260228120000-1234",
+  "client_id": "CL-20260228120100-4321",
+  "amount": 1050,
+  "status": "paid",
+  "paid_at": "2026-02-28T15:30:00Z"
+}
