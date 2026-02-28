@@ -32,7 +32,7 @@ app.get('/api', (_req, res) => {
   res.json({
     ok: true,
     status_code: 200,
-    service: 'survival-cash-engine-prototype',
+    service: 'survival-cash-engine',
     docs: '/'
   });
 });
@@ -46,7 +46,7 @@ app.use((_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Survival Cash Engine prototype running on http://localhost:${PORT}`);
+  console.log(`Survival Cash Engine running on http://localhost:${PORT}`);
 });
 
 startScheduler();

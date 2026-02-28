@@ -33,18 +33,26 @@ required_files=(
   "docs/SETUP_RUNBOOK.md"
   "docs/PROD_CUTOVER_CHECKLIST.md"
   "docs/LAUNCH_MONITORING_ROLLBACK.md"
-  "docs/RELEASE_NOTES_v0.1.md"
+  "docs/RELEASE_NOTES_v0.2.md"
   "docs/BASELINE_ARTIFACTS.md"
-  "docs/PROTOTYPE_ARCHITECTURE.md"
+  "docs/PRODUCTION_ARCHITECTURE.md"
   "docs/N8N_MAKE_INTEGRATION.md"
   "docs/MODEL_ROUTER.md"
   "docker-compose.yml"
   "Dockerfile"
+  "render.yaml"
+  ".github/workflows/ci.yml"
   "public/index.html"
   "public/app.js"
+  "public/agents.html"
+  "public/agents.js"
   "src/index.ts"
   "src/routes/api.ts"
+  "src/routes/agents.ts"
+  "src/routes/exec.ts"
   "src/services/automationService.ts"
+  "src/services/agentsService.ts"
+  "src/services/telemetryService.ts"
   "scripts/smoke_api.sh"
   "tests/TEST_SCENARIOS.md"
   "templates/webhook_reply_payload.json"
@@ -81,13 +89,13 @@ NODE
 grep -q "v0.1-launch-candidate" docs/BASELINE_ARTIFACTS.md || fail "Baseline tag not documented"
 pass "Baseline manifest tag presence"
 
-grep -q "ba4c885c2b1eb836341655f7543370ecdf9bdd78" docs/RELEASE_NOTES_v0.1.md || fail "Release notes commit hash mismatch"
-pass "Release notes commit hash"
+grep -q "v0.2-managed-launch" docs/RELEASE_NOTES_v0.2.md || fail "Release notes marker missing"
+pass "Release notes marker present"
 
 cat <<'TXT'
 [MANUAL CHECKS REQUIRED]
-- Start prototype service (`npm run dev` or `npm run start`) and validate dashboard workflows.
-- Validate API webhook endpoints `/api/webhooks/reply` and `/api/webhooks/stripe` with real relay.
+- Start service (`npm run dev` or `npm run start`) and validate both `/` and `/agents`.
+- Validate strict webhook endpoints `/exec?route=reply-hook` and `/exec?route=stripe-webhook` with real relay.
 - Execute docs/PROD_CUTOVER_CHECKLIST.md before setting DRY_RUN=FALSE.
 - Optional alternate path: validate Apps Script deployment if using `apps-script/`.
 TXT

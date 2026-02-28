@@ -1,0 +1,6 @@
+[submodule "vendor/openclaw"]
+	path = vendor/openclaw
+	url = https://github.com/openclaw/openclaw.git
+[submodule "vendor/n8n-nodes-starter"]
+	path = vendor/n8n-nodes-starter
+	url = https://github.com/n8n-io/n8n-nodes-starter.git

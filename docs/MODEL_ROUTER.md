@@ -23,7 +23,13 @@ Default:
 ## Behavior
 1. Router tries providers in order.
 2. On failure, logs attempt and falls back to next provider.
-3. If all providers fail, returns deterministic template fallback.
+3. Circuit breaker opens per provider after repeated failures:
+   - `MODEL_CB_FAILURE_THRESHOLD` (default `3`)
+   - `MODEL_CB_OPEN_SECONDS` (default `120`)
+4. If all providers fail, returns deterministic template fallback.
+5. Telemetry:
+   - Sentry captures failures if `SENTRY_DSN` is configured.
+   - Langfuse trace push runs when `LANGFUSE_*` keys are configured.
 
 ## Test Endpoint
 

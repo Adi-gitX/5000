@@ -1,85 +1,74 @@
-# Survival Cash Engine - Complete Working Prototype
+# Survival Cash Engine - Production Automation App
 
-Production-oriented prototype product with:
-- orchestration backend (Node + TypeScript + SQLite)
-- small frontend control panel
-- model routing (OpenClaw/OpenAI/Anthropic with fallback)
-- webhook contracts for replies and payments
-- n8n and Make dispatch integration
-- automated job scheduler with conservative compliance limits
+Full working automation app for lead reactivation, reply triage, booking, deposit tracking, onboarding triggers, and operator control via `/agents`.
 
-## What You Get
-- Fully runnable app at `http://localhost:8787`
-- Dashboard to manage settings, leads, jobs, metrics, logs
-- Endpoints to integrate email/reply/payment workflows
-- Launch governance docs (cutover, monitoring, rollback)
+## Runtime
+- Node.js + TypeScript API worker
+- SQLite operational store (with production safety controls and idempotent webhooks)
+- Signed workflow dispatch to n8n/Make with retry queue
+- Model routing with provider circuit breaker (OpenClaw -> OpenAI -> Anthropic -> deterministic fallback)
+- Admin control center at `/agents` with session auth + CSRF
 
-## Project Structure
-- `src/`: backend API + job engine + model router
-- `public/`: frontend dashboard (no build step)
-- `scripts/`: local gate, webhook replay, clasp deploy helper
-- `docs/`: setup, cutover, rollback, week-1 ops
-  - `docs/PROTOTYPE_ARCHITECTURE.md`
-  - `docs/N8N_MAKE_INTEGRATION.md`
-  - `docs/MODEL_ROUTER.md`
-- `apps-script/`: Google Apps Script implementation (legacy/alternate path)
+## Routes
+- Main dashboard: `/`
+- Agents control center: `/agents`
+- API health: `GET /api/health`
+- Strict webhooks:
+  - `POST /exec?route=reply-hook`
+  - `POST /exec?route=stripe-webhook`
+- Legacy webhooks:
+  - `POST /api/webhooks/reply`
+  - `POST /api/webhooks/stripe`
+  - `POST /api/webhooks/workflow-callback`
 
-## Quick Start (Local)
-1. Install dependencies:
-   - `npm install`
-2. Create env file:
-   - `cp .env.example .env`
-3. Run app:
-   - `npm run dev`
-4. Open dashboard:
-   - `http://localhost:8787`
-5. Run local launch gate:
-   - `./scripts/run_local_gate.sh`
+## `/api/agents` APIs
+- `POST /api/agents/session/login`
+- `POST /api/agents/session/logout`
+- `GET /api/agents/session/me`
+- `GET /api/agents/overview`
+- `GET /api/agents/connectors`
+- `POST /api/agents/connectors/test/:name`
+- `GET /api/agents/jobs`
+- `POST /api/agents/jobs/:jobKey/run`
+- `POST /api/agents/jobs/:jobKey/pause`
+- `POST /api/agents/manual-tasks`
+- `PATCH /api/agents/manual-tasks/:id`
 
-## Docker + n8n
-1. Ensure `.env` exists.
-2. Start stack:
-   - `docker compose up --build`
-3. App:
-   - `http://localhost:8787`
-4. n8n:
-   - `http://localhost:5678`
+## Quick Start
+1. `npm install`
+2. `cp .env.example .env`
+3. Configure required keys in `.env` and/or dashboard settings.
+4. `npm run dev`
+5. Open [http://localhost:8787](http://localhost:8787)
+6. Run local gate: `./scripts/run_local_gate.sh`
 
-## Core API Endpoints
-- `GET /api/health`
-- `GET /api/settings`, `PUT /api/settings`
-- `GET /api/leads`, `POST /api/leads`
-- `POST /api/lead-intake`, `POST /api/lead-intake/bulk`, `POST /api/lead-intake/promote`
-- `POST /api/jobs/:jobName` (`prospecting|outreach|followups|reply-triage|digest`)
-- `POST /api/webhooks/reply`
-- `POST /api/webhooks/stripe`
-- `POST /api/integrations/dispatch`
-- `POST /api/agent/generate`
+## Settings Keys (Required for Production)
+- `OPERATOR_EMAIL`
+- `CALENDLY_LINK`
+- `STRIPE_DEPOSIT_LINK`
+- `STRIPE_WEBHOOK_TOKEN`
+- `ADMIN_BOOTSTRAP_TOKEN`
+- `WEBHOOK_SIGNING_SECRET`
+- `DRY_RUN`
+- `MAX_SENDS_PER_HOUR`
+- `WARMUP_DAILY_LIMIT`
+- `QUIET_HOURS_START`
+- `QUIET_HOURS_END`
+- `DEFAULT_OWNER_TZ`
+- `OPENCLAW_BASE_URL`
+- `OPENCLAW_API_KEY`
+- `OPENAI_API_KEY`
+- `N8N_WEBHOOK_BASE` (or `N8N_WEBHOOK_URL`)
 
-## Required Webhook Contracts
-- Reply webhook: `reply_id, email, body, received_at, message_id`
-- Stripe webhook: `webhook_token, event_id, payment_id, amount, status`
-- Response contract: `{ ok, status_code, duplicate?, error? }`
+## Deploy (Managed Cloud)
+- Render config: `render.yaml`
+- CI pipeline: `.github/workflows/ci.yml`
+- Runbooks:
+  - `docs/SETUP_RUNBOOK.md`
+  - `docs/PROD_CUTOVER_CHECKLIST.md`
+  - `docs/LAUNCH_MONITORING_ROLLBACK.md`
+  - `docs/WEEK1_OPS_PLAYBOOK.md`
 
-## Automation Safety Defaults
-- `DRY_RUN=TRUE` until cutover complete
-- `MAX_SENDS_PER_HOUR=20`
-- `WARMUP_DAILY_LIMIT=80`
-- quiet-hours guard with timezone fallback
-- terminal suppression statuses:
-  - `suppressed_optout`
-  - `suppressed_bounce`
-
-## Launch Docs
-- Setup: `docs/SETUP_RUNBOOK.md`
-- Cutover gate: `docs/PROD_CUTOVER_CHECKLIST.md`
-- Monitoring + rollback: `docs/LAUNCH_MONITORING_ROLLBACK.md`
-- Week-1 operations: `docs/WEEK1_OPS_PLAYBOOK.md`
-- Baseline artifacts: `docs/BASELINE_ARTIFACTS.md`
-- Release notes: `docs/RELEASE_NOTES_v0.1.md`
-
-## Helper Scripts
-- `./scripts/run_local_gate.sh`
-- `./scripts/smoke_api.sh`
-- `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
-- `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`
+## Pinned OSS Submodules
+- `vendor/openclaw` @ `f0c86039`
+- `vendor/n8n-nodes-starter` @ `2e9e5c61`

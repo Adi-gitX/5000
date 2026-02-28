@@ -1,8 +1,8 @@
 {
-  "name": "survival-cash-engine-prototype",
+  "name": "survival-cash-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "Production-grade working prototype for automated B2B lead reactivation and booking",
+  "description": "Production-grade automated lead reactivation and booking engine with /agents control center",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

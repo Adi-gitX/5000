@@ -1,7 +1,7 @@
 # Week-1 Operations Playbook
 
 ## Daily Cadence
-- 09:00: check replies, deals, and suppressed lead counts
+- 09:00: check `/agents` overview (replies, deals, suppression, connector status)
 - 10:00: load new leads and run prospecting promotion
 - 11:00-17:00: calls, deposits, onboarding transitions
 - 18:00: clean invalid leads and enrich top prospects
@@ -12,6 +12,7 @@
 - Keep quiet-hours enabled
 - Never unsuppress opt-outs
 - Keep all payment events idempotent by `event_id`
+- Keep workflow retry queue healthy (`workflow_events.retry` should trend down)
 
 ## 48-Hour Pivot Rule
 After every 150 sends:

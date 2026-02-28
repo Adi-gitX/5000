@@ -9,6 +9,7 @@
 - send failure rate by `outreach_log.error_code`
 - new suppression count (`suppressed_optout`, `suppressed_bounce`)
 - webhook duplicate rates (`duplicate=true` on reply/payment endpoints)
+- workflow dispatch retry growth (`workflow_events.status=retry`)
 - digest receipt status in operator inbox
 - payment row integrity (`stripe_event_id` uniqueness)
 
@@ -20,11 +21,12 @@
 
 ## Immediate Pause Procedure
 1. Set `DRY_RUN=TRUE` in `settings`.
-2. Disable outreach triggers only:
+2. Pause outreach jobs from `/agents` only:
    - `runOutreachBatch`
    - `runFollowUpBatch`
 3. Keep these active:
    - `runReplyTriage`
+   - `workflow-dispatch`
    - `runPipelineDigest`
    - payment webhook endpoint
 4. Capture evidence snapshot:
@@ -34,9 +36,9 @@
 
 ## Rollback Procedure
 1. Confirm baseline target:
-   - tag `v0.1-launch-candidate`
-   - commit `ba4c885c2b1eb836341655f7543370ecdf9bdd78`
-2. Compare current deployed script with baseline checksums from `docs/BASELINE_ARTIFACTS.md`.
+   - tag `v0.1-launch-candidate` (legacy fallback)
+   - latest stable commit from `docs/RELEASE_NOTES_v0.2.md`
+2. Compare current deployed runtime with baseline checksums from `docs/BASELINE_ARTIFACTS.md`.
 3. If regression confirmed:
    - restore script content from baseline tag
    - redeploy web app

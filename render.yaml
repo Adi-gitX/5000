@@ -1,0 +1,78 @@
+services:
+  - type: web
+    name: survival-cash-engine
+    env: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 10000
+      - key: DB_PATH
+        value: data/prod.db
+      - key: OPERATOR_EMAIL
+        sync: false
+      - key: ADMIN_BOOTSTRAP_TOKEN
+        sync: false
+      - key: WEBHOOK_SIGNING_SECRET
+        sync: false
+      - key: STRIPE_WEBHOOK_TOKEN
+        sync: false
+      - key: STRIPE_DEPOSIT_LINK
+        sync: false
+      - key: CALENDLY_LINK
+        sync: false
+      - key: OPENCLAW_BASE_URL
+        sync: false
+      - key: OPENCLAW_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: N8N_WEBHOOK_BASE
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+      - key: MAKE_WEBHOOK_URL
+        sync: false
+      - key: DRY_RUN
+        value: "TRUE"
+      - key: MAX_SENDS_PER_HOUR
+        value: "20"
+      - key: WARMUP_DAILY_LIMIT
+        value: "80"
+      - key: QUIET_HOURS_START
+        value: "20"
+      - key: QUIET_HOURS_END
+        value: "08"
+      - key: DEFAULT_OWNER_TZ
+        value: America/New_York
+      - key: AUTO_RUN_ENABLED
+        value: "TRUE"
+
+  - type: cron
+    name: survival-cash-engine-workflow-drain
+    env: node
+    plan: starter
+    schedule: "*/15 * * * *"
+    buildCommand: npm ci && npm run build
+    startCommand: >
+      sh -lc 'curl -fsS -X POST "$APP_BASE_URL/api/jobs/workflow-dispatch"'
+    envVars:
+      - key: APP_BASE_URL
+        sync: false
+
+  - type: cron
+    name: survival-cash-engine-nightly-digest
+    env: node
+    plan: starter
+    schedule: "0 21 * * *"
+    buildCommand: npm ci && npm run build
+    startCommand: >
+      sh -lc 'curl -fsS -X POST "$APP_BASE_URL/api/jobs/digest"'
+    envVars:
+      - key: APP_BASE_URL
+        sync: false

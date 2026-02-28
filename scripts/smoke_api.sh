@@ -33,13 +33,16 @@ LEAD_ID=$(curl -sS -X POST http://localhost:8787/api/leads \
 sleep 1
 curl -sS -X POST http://localhost:8787/api/jobs/outreach >/dev/null
 
-curl -sS -X POST http://localhost:8787/api/webhooks/reply \
+curl -sS -X POST "http://localhost:8787/exec?route=reply-hook" \
   -H 'Content-Type: application/json' \
   -d "{\"reply_id\":\"rp_smoke_1\",\"prospect_id\":\"$LEAD_ID\",\"email\":\"owner@smokeclinic.com\",\"body\":\"Interested\",\"received_at\":\"2026-02-28T14:10:00Z\",\"message_id\":\"msg_smoke_1\"}" >/dev/null
 
-curl -sS -X POST http://localhost:8787/api/webhooks/stripe \
+curl -sS -X POST "http://localhost:8787/exec?route=stripe-webhook" \
   -H 'Content-Type: application/json' \
   -d "{\"webhook_token\":\"smoke\",\"event_id\":\"evt_smoke_1\",\"payment_id\":\"pi_smoke_1\",\"amount\":1050,\"status\":\"paid\",\"prospect_id\":\"$LEAD_ID\"}" >/dev/null
 
 curl -sS http://localhost:8787/api/metrics \
   | node -e "const fs=require('fs');const d=JSON.parse(fs.readFileSync(0,'utf8'));if(!d.ok){process.exit(1)};if(Number(d.data.cashCollected)<1050){console.error('Cash not updated');process.exit(1)};console.log('Smoke API test passed')"
+
+curl -sS -X POST http://localhost:8787/api/jobs/smoke-checks \
+  | node -e "const fs=require('fs');const d=JSON.parse(fs.readFileSync(0,'utf8'));if(!d.ok){process.exit(1)};if(Number(d.data.failed||0)!==0){console.error('Smoke checks failed');process.exit(1)};"

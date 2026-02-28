@@ -1,67 +1,76 @@
-# Test Scenarios
+# Test Scenarios (Production Gate)
 
-These checks map directly to the hardened production plan.
-
-## 1) Outbound Dry-Run Rendering (5 records)
+## 1) Outbound Dry-Run Rendering + Logging Completeness
 - Set `DRY_RUN=TRUE`.
-- Load 5 records into `lead_intake` and run `runDailyProspectingBatch()`.
-- Run `runOutreachBatch()`.
-- Verify in `outreach_log`:
-  - 5 `step_1` rows
-  - placeholders resolved
-  - `delivery_status` populated (`dry_run`)
-  - `message_id` populated
+- Insert 5 intake rows and run:
+  - `runDailyProspectingBatch()`
+  - `runOutreachBatch()`
+- Verify `outreach_log` rows include:
+  - `delivery_status`
+  - `message_id`
+  - `provider`
+  - `provider_event_id`
 
-## 2) Follow-up Suppression on Positive Reply
-- Post valid `reply-hook` payload with positive text.
-- Run `runReplyTriage()`.
+## 2) Positive Reply Suppresses Follow-Ups
+- Post valid payload to `POST /exec?route=reply-hook` with positive text.
+- Verify lead transitions to `positive_reply`.
+- Verify `next_touch_at` is cleared and no follow-up is sent.
+
+## 3) Opt-Out Terminal Suppression
+- Post opt-out payload (`stop`, `unsubscribe`, etc).
 - Verify:
-  - `prospects.status=positive_reply`
-  - `prospects.next_touch_at` is blank
-  - no follow-up send for this prospect
-
-## 3) Opt-Out Suppression Persistence
-- Post valid `reply-hook` payload containing opt-out phrase.
-- Verify in `prospects`:
   - `status=suppressed_optout`
   - `optout_at` populated
   - `do_not_contact_reason=user_optout`
-- Run outreach jobs and confirm zero sends for this prospect.
+  - `suppression_source=reply`
+- Verify outreach jobs never re-queue this lead.
 
-## 4) Bounce/Invalid Handling
-- Add `ready` prospect with malformed email.
-- Run `runOutreachBatch()`.
+## 4) Bounce / Invalid Email Terminal Suppression
+- Insert `ready` lead with malformed email.
+- Run outreach.
 - Verify:
   - `status=suppressed_bounce`
   - `last_error=invalid_email_format`
-  - `outreach_log.error_code=invalid_email_format`
+  - `suppression_source=validation`
 
 ## 5) Stripe Idempotency
-- Send same Stripe payload twice with same `event_id`.
-- Verify:
-  - first call appends payment row
-  - second returns `duplicate=true`
-  - no duplicate `payments` row
+- Send same stripe payload twice to `POST /exec?route=stripe-webhook`.
+- Verify second response has `duplicate=true`.
+- Verify only one row in `payments` for that `event_id`.
 
-## 6) Reply-Hook Idempotency
-- Send same reply payload twice with same `reply_id`.
+## 6) Reply Idempotency
+- Send same reply payload twice to `POST /exec?route=reply-hook`.
 - Verify second response has `duplicate=true`.
 
-## 7) Hourly and Daily Cap Enforcement
-- Set `MAX_SENDS_PER_HOUR=2` and `WARMUP_DAILY_LIMIT=3`.
-- With 10 ready leads, run outreach repeatedly.
-- Verify no more than 2 sends/hour and 3 sends/day.
+## 7) Webhook Required Fields
+- Omit required fields for reply and stripe payloads.
+- Verify `status_code=400` and `ok=false`.
 
-## 8) Quiet-Hours Block
-- Set quiet window to cover current test hour.
+## 8) Hourly + Daily Send Caps
+- Configure `MAX_SENDS_PER_HOUR=2`, `WARMUP_DAILY_LIMIT=3`.
+- Run outreach with >10 eligible leads.
+- Verify caps are enforced in `outreach_log`.
+
+## 9) Quiet-Hours Enforcement
+- Configure quiet window covering current lead timezone hour.
 - Run outreach.
-- Verify no outbound rows appended.
+- Verify sends are skipped.
 
-## 9) Digest KPI Accuracy
-- Set `OPERATOR_EMAIL`.
+## 10) Workflow Dispatch Retry Queue
+- Configure unreachable n8n URL.
+- Trigger `dispatchAutomationEvent`.
+- Verify `workflow_events.status=retry`.
+- Fix endpoint and run `POST /api/jobs/workflow-dispatch`.
+- Verify event transitions to `sent` or `completed`.
+
+## 11) `/agents` Session + CSRF Protection
+- Login with `POST /api/agents/session/login`.
+- Use returned CSRF token for mutating `/api/agents/*`.
+- Verify mutating request without CSRF returns `403`.
+
+## 12) KPI Digest Accuracy
 - Run `runPipelineDigest()`.
-- Verify email includes sends, replies, deposits, and cash total.
-
-## 10) Webhook Required-Field Rejection
-- Omit required keys in webhook payloads.
-- Verify API returns `ok=false` with `status_code=400`.
+- Verify digest totals reconcile with:
+  - `leads`
+  - `outreach_log`
+  - `payments`

@@ -56,6 +56,8 @@ export const SYSTEM_DEFAULT_SETTINGS: Record<string, string> = {
   ANTHROPIC_API_KEY: '',
   ANTHROPIC_MODEL: 'claude-3-5-sonnet-latest',
   MODEL_PROVIDER_CHAIN: 'openclaw,openai,anthropic',
+  MODEL_CB_FAILURE_THRESHOLD: '3',
+  MODEL_CB_OPEN_SECONDS: '120',
   SMTP_HOST: '',
   SMTP_PORT: '587',
   SMTP_USER: '',

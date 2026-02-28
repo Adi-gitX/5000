@@ -93,7 +93,7 @@ apiRouter.get('/health', (_req, res) => {
   res.json({
     ok: true,
     status_code: 200,
-    service: 'survival-cash-engine-prototype',
+    service: 'survival-cash-engine',
     time: new Date().toISOString()
   });
 });

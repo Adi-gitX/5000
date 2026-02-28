@@ -1,49 +1,58 @@
-# n8n and Make Integration Guide
+# n8n and Make Integration Guide (Signed + Retry)
 
-This prototype emits automation events to both platforms when URLs are configured.
+## Dispatch Model
+All automation events are queued in `workflow_events` and dispatched with HMAC signing.
+
+Headers sent:
+- `x-event-id`
+- `x-webhook-timestamp`
+- `x-webhook-signature` (SHA256 HMAC over `timestamp.body`)
+
+Signing key:
+- `WEBHOOK_SIGNING_SECRET`
 
 ## Event Envelope
-All outbound dispatches use:
-
 ```json
 {
-  "event_name": "positive_reply",
+  "event_id": "WF-...",
+  "event_name": "payment_received",
+  "occurred_at": "2026-02-28T18:00:00.000Z",
   "payload": {
-    "lead_id": "PR-...",
-    "email": "owner@example.com"
+    "payment_id": "pi_...",
+    "deal_id": "DL-..."
   }
 }
 ```
 
-## Configure n8n
-1. Create a Webhook trigger node (POST).
-2. Copy webhook production URL.
-3. Set `N8N_WEBHOOK_URL` in settings/UI.
-4. Add routing by `event_name` in n8n workflow.
+## n8n Setup
+1. Build webhook workflow(s) in n8n.
+2. Set either:
+   - `N8N_WEBHOOK_URL` (single endpoint), or
+   - `N8N_WEBHOOK_BASE` (event-specific route suffixes).
+3. Verify signature in first node using `WEBHOOK_SIGNING_SECRET`.
+4. Return 2xx quickly; long work should continue asynchronously in n8n.
 
-Suggested events:
-- `positive_reply`
-- `payment_received`
-- `manual_test`
+## Make Setup
+1. Configure custom webhook scenario.
+2. Set `MAKE_WEBHOOK_URL`.
+3. Verify HMAC signature before state-changing actions.
 
-## Configure Make
-1. Create Custom Webhook in Make.
-2. Copy webhook URL.
-3. Set `MAKE_WEBHOOK_URL` in settings/UI.
-4. Route by `event_name` in scenario.
+## Retry Behavior
+- Failed dispatches are marked `retry`.
+- Retry backoff is exponential up to 30 minutes.
+- Queue drain job:
+  - scheduler: every 15 minutes
+  - manual trigger: `POST /api/jobs/workflow-dispatch`
 
-## Validation
-From dashboard:
-- Use `Integration Dispatch Test`.
+## Callback
+Workflows can report terminal status back to:
+- `POST /api/webhooks/workflow-callback`
 
-From API:
-
-```bash
-curl -X POST http://localhost:8787/api/integrations/dispatch \
-  -H 'Content-Type: application/json' \
-  -d '{"event_name":"manual_test","payload":{"source":"cli"}}'
+Payload:
+```json
+{
+  "event_id": "WF-...",
+  "status": "completed",
+  "details": "onboarding package sent"
+}
 ```
-
-## Idempotency Advice
-- Use `event_name + payload.payment_id` or `event_name + payload.lead_id + timestamp` as dedupe keys in n8n/Make.
-- Do not trigger billing actions without checking duplicate event IDs.
