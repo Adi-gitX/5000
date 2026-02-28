@@ -27,7 +27,9 @@ const leadSchema = z.object({
   email: z.string().email(),
   linkedin_url: z.string().optional(),
   pain_signal: z.string().optional(),
-  owner: z.string().optional()
+  owner: z.string().optional(),
+  timezone: z.string().optional(),
+  suppression_source: z.string().optional()
 });
 
 const intakeSchema = z.object({
@@ -39,6 +41,7 @@ const intakeSchema = z.object({
   linkedin_url: z.string().optional(),
   pain_signal: z.string().optional(),
   owner: z.string().optional(),
+  timezone: z.string().optional(),
   source: z.string().optional()
 });
 
@@ -63,7 +66,7 @@ const replyWebhookSchema = z.object({
   body: z.string().min(1),
   received_at: z.string().min(1),
   message_id: z.string().min(1)
-});
+}).strict();
 
 const stripeWebhookSchema = z.object({
   webhook_token: z.string().min(1),
@@ -75,7 +78,7 @@ const stripeWebhookSchema = z.object({
   prospect_id: z.string().optional(),
   client_id: z.string().optional(),
   paid_at: z.string().optional()
-});
+}).strict();
 
 export const apiRouter = Router();
 
@@ -124,8 +127,8 @@ apiRouter.post('/lead-intake', (req, res) => {
   }
 
   db.prepare(
-    `INSERT INTO lead_intake (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, owner, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO lead_intake (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, owner, timezone, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     null,
     parsed.data.business_name,
@@ -136,6 +139,7 @@ apiRouter.post('/lead-intake', (req, res) => {
     parsed.data.linkedin_url || '',
     parsed.data.pain_signal || '',
     parsed.data.owner || '',
+    parsed.data.timezone || '',
     parsed.data.source || 'manual'
   );
 
@@ -149,8 +153,8 @@ apiRouter.post('/lead-intake/bulk', (req, res) => {
   }
 
   const stmt = db.prepare(
-    `INSERT INTO lead_intake (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, owner, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO lead_intake (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, owner, timezone, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const tx = db.transaction((rows: Array<z.infer<typeof intakeSchema>>) => {
@@ -165,6 +169,7 @@ apiRouter.post('/lead-intake/bulk', (req, res) => {
         row.linkedin_url || '',
         row.pain_signal || '',
         row.owner || '',
+        row.timezone || '',
         row.source || 'bulk'
       );
     }

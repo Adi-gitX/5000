@@ -12,8 +12,10 @@ export type Lead = {
   last_touch_at: string | null;
   next_touch_at: string | null;
   owner: string;
+  timezone: string;
   optout_at: string | null;
   do_not_contact_reason: string;
+  suppression_source: string;
   last_error: string;
   created_at: string;
   updated_at: string;

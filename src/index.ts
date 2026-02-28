@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { PORT } from './constants.js';
 import { initializeDatabase } from './db.js';
 import { apiRouter } from './routes/api.js';
+import { execRouter } from './routes/exec.js';
 import { startScheduler } from './scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(publicDir));
 
 app.use('/api', apiRouter);
+app.use('/exec', execRouter);
 
 app.get('/api', (_req, res) => {
   res.json({
@@ -29,6 +31,10 @@ app.get('/api', (_req, res) => {
     service: 'survival-cash-engine-prototype',
     docs: '/'
   });
+});
+
+app.get('/agents', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'agents.html'));
 });
 
 app.use((_req, res) => {

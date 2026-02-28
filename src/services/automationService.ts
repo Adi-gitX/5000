@@ -41,6 +41,10 @@ function startOfUtcHourIso(date: Date): string {
 }
 
 function resolveLeadTimeZone(lead: Lead, settings: SettingsMap): string {
+  const explicit = String(lead.timezone ?? '').trim();
+  if (/^[A-Za-z_]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?$/.test(explicit)) {
+    return explicit;
+  }
   const owner = String(lead.owner ?? '').trim();
   if (/^[A-Za-z_]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?$/.test(owner)) {
     return owner;
@@ -197,6 +201,7 @@ async function maybePersonalizeMessage(
 
 function insertOutreachLog(input: {
   leadId: string;
+  prospectId?: string;
   step: string;
   channel: string;
   subject: string;
@@ -206,13 +211,16 @@ function insertOutreachLog(input: {
   deliveryStatus?: string;
   errorCode?: string;
   messageId?: string;
+  provider?: string;
+  providerEventId?: string;
 }): void {
   db.prepare(
     `INSERT INTO outreach_log
-      (lead_id, step, channel, subject, message, sent_at, reply_class, delivery_status, error_code, message_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (lead_id, prospect_id, step, channel, subject, message, sent_at, reply_class, delivery_status, error_code, message_id, provider, provider_event_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     input.leadId,
+    input.prospectId ?? input.leadId,
     input.step,
     input.channel,
     input.subject,
@@ -221,7 +229,9 @@ function insertOutreachLog(input: {
     input.replyClass ?? '',
     input.deliveryStatus ?? '',
     input.errorCode ?? '',
-    input.messageId ?? ''
+    input.messageId ?? '',
+    input.provider ?? '',
+    input.providerEventId ?? ''
   );
 }
 
@@ -231,8 +241,8 @@ export function addLead(payload: Partial<Lead>): Lead {
 
   db.prepare(
     `INSERT INTO leads
-      (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, status, next_touch_at, owner, optout_at, do_not_contact_reason, last_error, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      (lead_id, business_name, niche, city, website, email, linkedin_url, pain_signal, status, next_touch_at, owner, timezone, optout_at, do_not_contact_reason, suppression_source, last_error, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     leadId,
     payload.business_name || 'Unknown Business',
@@ -245,8 +255,10 @@ export function addLead(payload: Partial<Lead>): Lead {
     payload.status || STATUS.READY,
     payload.next_touch_at || now,
     payload.owner || '',
+    payload.timezone || '',
     payload.optout_at || null,
     payload.do_not_contact_reason || '',
+    payload.suppression_source || '',
     payload.last_error || '',
     now,
     now
@@ -335,7 +347,8 @@ export function runDailyProspectingBatch(): JobRunResult {
           pain_signal: String(row.pain_signal || ''),
           status: STATUS.READY,
           next_touch_at: now,
-          owner: String(row.owner || '')
+          owner: String(row.owner || ''),
+          timezone: String(row.timezone || '')
         });
         promoted++;
       }
@@ -383,29 +396,29 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
     .prepare('SELECT COUNT(*) AS c FROM outreach_log WHERE sent_at >= ? AND step IN (?, ?, ?)')
     .get(hourStart, OUTREACH_STEPS.STEP_1, OUTREACH_STEPS.STEP_2, OUTREACH_STEPS.STEP_3) as { c: number }).c;
 
-  let statusFilter: string = STATUS.READY;
-  let step: string = OUTREACH_STEPS.STEP_1;
+  const statusFilter = mode === 'new' ? STATUS.READY : `${STATUS.FOLLOWUP_1_DUE}|${STATUS.FOLLOWUP_2_DUE}`;
+  const step = mode === 'new' ? OUTREACH_STEPS.STEP_1 : `${OUTREACH_STEPS.STEP_2}|${OUTREACH_STEPS.STEP_3}`;
 
-  if (mode === 'followup') {
-    // Process first and second followups together in deterministic order.
-    statusFilter = STATUS.FOLLOWUP_1_DUE;
-    step = OUTREACH_STEPS.STEP_2;
-  }
-
-  const candidates = db
-    .prepare(
-      `SELECT * FROM leads
-       WHERE status IN (?, ?, ?)
-         AND (next_touch_at IS NULL OR next_touch_at <= ?)
-       ORDER BY id ASC
-       LIMIT 500`
-    )
-    .all(
-      mode === 'new' ? STATUS.READY : STATUS.FOLLOWUP_1_DUE,
-      mode === 'new' ? STATUS.READY : STATUS.FOLLOWUP_2_DUE,
-      mode === 'new' ? STATUS.READY : STATUS.FOLLOWUP_2_DUE,
-      nowIsoValue
-    ) as Lead[];
+  const candidates =
+    mode === 'new'
+      ? (db
+          .prepare(
+            `SELECT * FROM leads
+             WHERE status = ?
+               AND (next_touch_at IS NULL OR next_touch_at <= ?)
+             ORDER BY id ASC
+             LIMIT 500`
+          )
+          .all(STATUS.READY, nowIsoValue) as Lead[])
+      : (db
+          .prepare(
+            `SELECT * FROM leads
+             WHERE status IN (?, ?)
+               AND (next_touch_at IS NULL OR next_touch_at <= ?)
+             ORDER BY id ASC
+             LIMIT 500`
+          )
+          .all(STATUS.FOLLOWUP_1_DUE, STATUS.FOLLOWUP_2_DUE, nowIsoValue) as Lead[]);
 
   let sent = 0;
   let processed = 0;
@@ -449,9 +462,9 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
     if (!isValidEmail(lead.email)) {
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=NULL, last_error=?, updated_at=?
+         SET status=?, next_touch_at=NULL, suppression_source=?, last_error=?, updated_at=?
          WHERE lead_id=?`
-      ).run(STATUS.SUPPRESSED_BOUNCE, 'invalid_email_format', nowIsoValue, lead.lead_id);
+      ).run(STATUS.SUPPRESSED_BOUNCE, 'validation', 'invalid_email_format', nowIsoValue, lead.lead_id);
 
       insertOutreachLog({
         leadId: lead.lead_id,
@@ -463,7 +476,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
         replyClass: 'error',
         deliveryStatus: 'failed',
         errorCode: 'invalid_email_format',
-        messageId: buildId('MSG')
+        messageId: buildId('MSG'),
+        provider: 'validation'
       });
 
       processed++;
@@ -477,11 +491,12 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
 
     if (sendResult.deliveryStatus === 'failed') {
       const nextStatus = sendResult.errorCode === 'bounce' ? STATUS.SUPPRESSED_BOUNCE : STATUS.HOLD;
+      const suppressionSource = nextStatus === STATUS.SUPPRESSED_BOUNCE ? 'smtp' : '';
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=NULL, last_error=?, updated_at=?
+         SET status=?, next_touch_at=NULL, suppression_source=?, last_error=?, updated_at=?
          WHERE lead_id=?`
-      ).run(nextStatus, sendResult.errorCode || 'send_error', nowIsoValue, lead.lead_id);
+      ).run(nextStatus, suppressionSource, sendResult.errorCode || 'send_error', nowIsoValue, lead.lead_id);
 
       insertOutreachLog({
         leadId: lead.lead_id,
@@ -493,7 +508,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
         replyClass: 'error',
         deliveryStatus: 'failed',
         errorCode: sendResult.errorCode || 'send_error',
-        messageId
+        messageId,
+        provider: aiMessage.provider
       });
 
       processed++;
@@ -506,19 +522,19 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
     if (leadStep === OUTREACH_STEPS.STEP_1) {
       db.prepare(
         `UPDATE leads
-         SET status=?, last_touch_at=?, next_touch_at=?, last_error='', updated_at=?
+         SET status=?, last_touch_at=?, next_touch_at=?, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.FOLLOWUP_1_DUE, nowIsoValue, hoursFromNow(24), nowIsoValue, lead.lead_id);
     } else if (leadStep === OUTREACH_STEPS.STEP_2) {
       db.prepare(
         `UPDATE leads
-         SET status=?, last_touch_at=?, next_touch_at=?, last_error='', updated_at=?
+         SET status=?, last_touch_at=?, next_touch_at=?, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.FOLLOWUP_2_DUE, nowIsoValue, hoursFromNow(48), nowIsoValue, lead.lead_id);
     } else {
       db.prepare(
         `UPDATE leads
-         SET status=?, last_touch_at=?, next_touch_at=NULL, last_error='', updated_at=?
+         SET status=?, last_touch_at=?, next_touch_at=NULL, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.COMPLETED_OUTREACH, nowIsoValue, nowIsoValue, lead.lead_id);
     }
@@ -533,7 +549,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
       replyClass: '',
       deliveryStatus: sendResult.deliveryStatus,
       errorCode: '',
-      messageId
+      messageId,
+      provider: aiMessage.provider
     });
   }
 
@@ -750,7 +767,7 @@ export async function runReplyTriage(): Promise<JobRunResult> {
     if (classification === 'positive') {
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=NULL, last_touch_at=?, last_error='', updated_at=?
+         SET status=?, next_touch_at=NULL, last_touch_at=?, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.POSITIVE_REPLY, now, now, lead.lead_id);
 
@@ -791,12 +808,13 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         replyClass: classification,
         deliveryStatus: sendResult.deliveryStatus,
         errorCode: sendResult.errorCode || '',
-        messageId
+        messageId,
+        provider: 'inbound'
       });
     } else if (classification === 'neutral') {
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=?, last_touch_at=?, last_error='', updated_at=?
+         SET status=?, next_touch_at=?, last_touch_at=?, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.NEUTRAL_REPLY, hoursFromNow(24), now, now, lead.lead_id);
 
@@ -809,12 +827,13 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         sentAt: now,
         replyClass: classification,
         deliveryStatus: 'received',
-        messageId: String(reply.message_id || '')
+        messageId: String(reply.message_id || ''),
+        provider: 'inbound'
       });
     } else if (classification === 'negative') {
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=NULL, last_touch_at=?, last_error='', updated_at=?
+         SET status=?, next_touch_at=NULL, last_touch_at=?, suppression_source='', last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.NEGATIVE_REPLY, now, now, lead.lead_id);
 
@@ -827,12 +846,13 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         sentAt: now,
         replyClass: classification,
         deliveryStatus: 'received',
-        messageId: String(reply.message_id || '')
+        messageId: String(reply.message_id || ''),
+        provider: 'inbound'
       });
     } else {
       db.prepare(
         `UPDATE leads
-         SET status=?, next_touch_at=NULL, optout_at=?, do_not_contact_reason='user_optout', last_touch_at=?, last_error='', updated_at=?
+         SET status=?, next_touch_at=NULL, optout_at=?, do_not_contact_reason='user_optout', suppression_source='reply', last_touch_at=?, last_error='', updated_at=?
          WHERE lead_id=?`
       ).run(STATUS.SUPPRESSED_OPTOUT, now, now, now, lead.lead_id);
 
@@ -845,7 +865,8 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         sentAt: now,
         replyClass: classification,
         deliveryStatus: 'received',
-        messageId: String(reply.message_id || '')
+        messageId: String(reply.message_id || ''),
+        provider: 'inbound'
       });
     }
 
@@ -907,6 +928,40 @@ export async function runPipelineDigest(): Promise<JobRunResult & { digest: stri
   return result;
 }
 
+export function runSmokeChecks(): { job: string; passed: number; failed: number; checks: Array<Record<string, unknown>> } {
+  const checks: Array<Record<string, unknown>> = [];
+
+  const addCheck = (name: string, ok: boolean, details = '') => {
+    checks.push({ name, ok, details });
+  };
+
+  addCheck(
+    'reply_required_fields',
+    REQUIRED_REPLY_WEBHOOK_FIELDS.join(',') === 'reply_id,email,body,received_at,message_id',
+    REQUIRED_REPLY_WEBHOOK_FIELDS.join(',')
+  );
+
+  addCheck(
+    'stripe_required_fields',
+    REQUIRED_STRIPE_WEBHOOK_FIELDS.join(',') === 'webhook_token,event_id,payment_id,amount,status',
+    REQUIRED_STRIPE_WEBHOOK_FIELDS.join(',')
+  );
+
+  addCheck('classify_positive', classifyReply('Yes interested, send pricing') === 'positive');
+  addCheck('classify_optout', classifyReply('Please unsubscribe me') === 'optout');
+  addCheck('classify_negative', classifyReply('No thanks, not interested') === 'negative');
+  addCheck(
+    'terminal_statuses',
+    TERMINAL_SUPPRESSED.has(STATUS.SUPPRESSED_OPTOUT) && TERMINAL_SUPPRESSED.has(STATUS.SUPPRESSED_BOUNCE)
+  );
+
+  const failed = checks.filter((x) => !x.ok).length;
+  const passed = checks.length - failed;
+  const payload = { job: 'runSmokeChecks', passed, failed, checks };
+  logJobRun('runSmokeChecks', failed === 0 ? 'success' : 'error', JSON.stringify(payload));
+  return payload;
+}
+
 export async function runJobByName(jobName: string): Promise<JobRunResult | Record<string, unknown>> {
   if (jobName === 'prospecting') {
     return runDailyProspectingBatch();
@@ -922,6 +977,9 @@ export async function runJobByName(jobName: string): Promise<JobRunResult | Reco
   }
   if (jobName === 'digest') {
     return runPipelineDigest();
+  }
+  if (jobName === 'smoke-checks') {
+    return runSmokeChecks();
   }
 
   return {

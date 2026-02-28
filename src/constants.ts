@@ -24,6 +24,7 @@ export const TERMINAL_SUPPRESSED = new Set<string>([STATUS.SUPPRESSED_OPTOUT, ST
 
 export const SYSTEM_DEFAULT_SETTINGS: Record<string, string> = {
   OPERATOR_EMAIL: '',
+  ADMIN_BOOTSTRAP_TOKEN: '',
   SENDER_NAME: 'Lead Reactivation Desk',
   OFFER_NAME: '14-Day Lead Reactivation Sprint + AI Booking Assistant',
   CALENDLY_LINK: '',
@@ -42,8 +43,10 @@ export const SYSTEM_DEFAULT_SETTINGS: Record<string, string> = {
   DEFAULT_QUOTED_PRICE: '1500',
   PIVOT_REPLY_RATE_FLOOR: '0.01',
   AUTO_RUN_ENABLED: 'TRUE',
+  N8N_WEBHOOK_BASE: '',
   N8N_WEBHOOK_URL: '',
   MAKE_WEBHOOK_URL: '',
+  WEBHOOK_SIGNING_SECRET: '',
   OPENAI_API_KEY: '',
   OPENAI_BASE_URL: 'https://api.openai.com/v1',
   OPENAI_MODEL: 'gpt-4.1-mini',
@@ -57,7 +60,11 @@ export const SYSTEM_DEFAULT_SETTINGS: Record<string, string> = {
   SMTP_PORT: '587',
   SMTP_USER: '',
   SMTP_PASS: '',
-  SMTP_SECURE: 'FALSE'
+  SMTP_SECURE: 'FALSE',
+  SENTRY_DSN: '',
+  LANGFUSE_BASE_URL: 'https://cloud.langfuse.com',
+  LANGFUSE_PUBLIC_KEY: '',
+  LANGFUSE_SECRET_KEY: ''
 };
 
 export const REQUIRED_REPLY_WEBHOOK_FIELDS = ['reply_id', 'email', 'body', 'received_at', 'message_id'] as const;
