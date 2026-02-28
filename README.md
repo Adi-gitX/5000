@@ -24,6 +24,9 @@ This implementation is configured for a compliant conservative launch profile.
 - `docs/72H_EXECUTION_CHECKLIST.md`: first 72-hour operating checklist
 - `docs/WEEK1_OPS_PLAYBOOK.md`: day-by-day week-1 cadence
 - `docs/PROD_CUTOVER_CHECKLIST.md`: dry-run to production cutover gate
+- `docs/LAUNCH_MONITORING_ROLLBACK.md`: pause criteria, recovery, rollback flow
+- `docs/RELEASE_NOTES_v0.1.md`: launch candidate release notes and contracts
+- `docs/BASELINE_ARTIFACTS.md`: frozen artifact list and checksums
 - `docs/OFFER_ONE_PAGER.md`: one-page offer spec
 - `docs/SALES_CALL_SCRIPT.md`: close script for calls
 - `tests/TEST_SCENARIOS.md`: acceptance checks mapped to plan
@@ -63,10 +66,11 @@ This implementation is configured for a compliant conservative launch profile.
    - keep `DRY_RUN=TRUE` for validation
 5. Run `createOrResetTriggers()`.
 6. Load leads into `lead_intake`, then run `runDailyProspectingBatch()`.
-7. Validate with `runSmokeChecks()` and test scenarios in `tests/TEST_SCENARIOS.md`.
-8. Deploy as web app and configure relay routes:
+7. Run local gate script: `./scripts/run_local_gate.sh`.
+8. Validate with `runSmokeChecks()` and test scenarios in `tests/TEST_SCENARIOS.md`.
+9. Deploy as web app and configure relay routes:
    - `.../exec?route=stripe-webhook`
    - `.../exec?route=reply-hook`
-9. Switch `DRY_RUN` to `FALSE` only after cutover checklist passes.
+10. Switch `DRY_RUN` to `FALSE` only after cutover checklist passes.
 
 Detailed setup is in `docs/SETUP_RUNBOOK.md`.

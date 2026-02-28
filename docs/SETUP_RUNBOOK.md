@@ -68,16 +68,19 @@ Suppressed rows are excluded from all outreach jobs.
 
 ## 6) Validate Before Live Send
 1. Keep `DRY_RUN=TRUE`.
-2. Run:
+2. Run local gate in terminal:
+   - `./scripts/run_local_gate.sh`
+3. In Apps Script, run:
+   - `runSmokeChecks()`
+4. Then run:
    - `runOutreachBatch()`
    - `runFollowUpBatch()`
    - `runReplyTriage()`
-   - `runSmokeChecks()`
-3. Verify in `outreach_log`:
+5. Verify in `outreach_log`:
    - `delivery_status` populated
    - `message_id` populated
    - errors mapped to `error_code`
-4. Execute scenarios in `tests/TEST_SCENARIOS.md`.
+6. Execute scenarios in `tests/TEST_SCENARIOS.md`.
 
 ## 7) Create Triggers
 Run `createOrResetTriggers()`.
