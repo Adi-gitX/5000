@@ -101,6 +101,9 @@ Use query-based routes:
 - `https://script.google.com/.../exec?route=stripe-webhook`
 - `https://script.google.com/.../exec?route=reply-hook`
 
+Optional terminal replay test:
+- `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
+
 ### Stripe webhook required JSON keys
 - `webhook_token`
 - `event_id`

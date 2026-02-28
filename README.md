@@ -31,6 +31,8 @@ This implementation is configured for a compliant conservative launch profile.
 - `docs/SALES_CALL_SCRIPT.md`: close script for calls
 - `tests/TEST_SCENARIOS.md`: acceptance checks mapped to plan
 - `templates/`: outreach templates and webhook payload examples
+- `scripts/run_local_gate.sh`: local launch gate checks
+- `scripts/replay_webhooks.sh`: sample webhook replay against deployed web app
 
 ## Core Functions
 - `runDailyProspectingBatch()`
@@ -72,5 +74,7 @@ This implementation is configured for a compliant conservative launch profile.
    - `.../exec?route=stripe-webhook`
    - `.../exec?route=reply-hook`
 10. Switch `DRY_RUN` to `FALSE` only after cutover checklist passes.
+11. Optional endpoint sanity check:
+    - `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
 
 Detailed setup is in `docs/SETUP_RUNBOOK.md`.
