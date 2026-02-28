@@ -33,6 +33,7 @@ This implementation is configured for a compliant conservative launch profile.
 - `templates/`: outreach templates and webhook payload examples
 - `scripts/run_local_gate.sh`: local launch gate checks
 - `scripts/replay_webhooks.sh`: sample webhook replay against deployed web app
+- `scripts/deploy_with_clasp.sh`: optional scripted push/deploy for Apps Script
 
 ## Core Functions
 - `runDailyProspectingBatch()`
@@ -76,5 +77,7 @@ This implementation is configured for a compliant conservative launch profile.
 10. Switch `DRY_RUN` to `FALSE` only after cutover checklist passes.
 11. Optional endpoint sanity check:
     - `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
+12. Optional scripted Apps Script push:
+    - `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`
 
 Detailed setup is in `docs/SETUP_RUNBOOK.md`.

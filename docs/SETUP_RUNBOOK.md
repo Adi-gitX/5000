@@ -96,6 +96,8 @@ Created schedule:
 1. Apps Script -> Deploy -> New deployment -> Web app.
 2. Execute as: your account.
 3. Access: anyone with link (or restricted behind relay).
+4. Optional scripted push path:
+   - `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`
 
 Use query-based routes:
 - `https://script.google.com/.../exec?route=stripe-webhook`
