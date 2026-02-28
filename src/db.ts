@@ -420,3 +420,18 @@ export function markWorkflowEventRetry(id: number, retryCount: number, nextAttem
      WHERE id=?`
   ).run(retryCount, nextAttemptIso, errorText, id);
 }
+
+export function markWorkflowEventCallback(eventId: string, status: 'completed' | 'failed', details: string): void {
+  db.prepare(
+    `UPDATE workflow_events
+     SET status=?, last_error=?, updated_at=CURRENT_TIMESTAMP
+     WHERE event_id=?`
+  ).run(status, details, eventId);
+}
+
+export function getWorkflowEvent(eventId: string): Record<string, unknown> | null {
+  const row = db.prepare('SELECT * FROM workflow_events WHERE event_id = ? LIMIT 1').get(eventId) as
+    | Record<string, unknown>
+    | undefined;
+  return row || null;
+}

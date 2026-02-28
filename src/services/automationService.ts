@@ -8,7 +8,7 @@ import {
 } from '../constants.js';
 import { sendEmail } from './emailService.js';
 import { generateTextWithFallback } from './modelRouter.js';
-import { dispatchAutomationEvent } from './integrationService.js';
+import { dispatchAutomationEvent, dispatchQueuedWorkflowEvents } from './integrationService.js';
 import type {
   JobRunResult,
   Lead,
@@ -477,7 +477,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
         deliveryStatus: 'failed',
         errorCode: 'invalid_email_format',
         messageId: buildId('MSG'),
-        provider: 'validation'
+        provider: 'validation',
+        providerEventId: ''
       });
 
       processed++;
@@ -509,7 +510,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
         deliveryStatus: 'failed',
         errorCode: sendResult.errorCode || 'send_error',
         messageId,
-        provider: aiMessage.provider
+        provider: aiMessage.provider,
+        providerEventId: sendResult.messageId || messageId
       });
 
       processed++;
@@ -550,7 +552,8 @@ async function runOutreachStep(mode: 'new' | 'followup'): Promise<JobRunResult> 
       deliveryStatus: sendResult.deliveryStatus,
       errorCode: '',
       messageId,
-      provider: aiMessage.provider
+      provider: aiMessage.provider,
+      providerEventId: sendResult.messageId || messageId
     });
   }
 
@@ -809,7 +812,8 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         deliveryStatus: sendResult.deliveryStatus,
         errorCode: sendResult.errorCode || '',
         messageId,
-        provider: 'inbound'
+        provider: 'inbound',
+        providerEventId: sendResult.messageId || messageId
       });
     } else if (classification === 'neutral') {
       db.prepare(
@@ -828,7 +832,8 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         replyClass: classification,
         deliveryStatus: 'received',
         messageId: String(reply.message_id || ''),
-        provider: 'inbound'
+        provider: 'inbound',
+        providerEventId: String(reply.message_id || '')
       });
     } else if (classification === 'negative') {
       db.prepare(
@@ -847,7 +852,8 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         replyClass: classification,
         deliveryStatus: 'received',
         messageId: String(reply.message_id || ''),
-        provider: 'inbound'
+        provider: 'inbound',
+        providerEventId: String(reply.message_id || '')
       });
     } else {
       db.prepare(
@@ -866,7 +872,8 @@ export async function runReplyTriage(): Promise<JobRunResult> {
         replyClass: classification,
         deliveryStatus: 'received',
         messageId: String(reply.message_id || ''),
-        provider: 'inbound'
+        provider: 'inbound',
+        providerEventId: String(reply.message_id || '')
       });
     }
 
@@ -977,6 +984,9 @@ export async function runJobByName(jobName: string): Promise<JobRunResult | Reco
   }
   if (jobName === 'digest') {
     return runPipelineDigest();
+  }
+  if (jobName === 'workflow-dispatch' || jobName === 'onboarding') {
+    return dispatchQueuedWorkflowEvents(getSettings(), 50);
   }
   if (jobName === 'smoke-checks') {
     return runSmokeChecks();

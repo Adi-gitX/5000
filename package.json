@@ -12,6 +12,7 @@
     "gate": "./scripts/run_local_gate.sh"
   },
   "dependencies": {
+    "@sentry/node": "^10.40.0",
     "better-sqlite3": "^12.4.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",

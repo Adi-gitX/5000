@@ -14,6 +14,7 @@ import {
   runJobByName
 } from '../services/automationService.js';
 import { dispatchAutomationEvent } from '../services/integrationService.js';
+import { handleWorkflowCallback } from '../services/integrationService.js';
 import { generateTextWithFallback } from '../services/modelRouter.js';
 
 const settingsSchema = z.record(z.string(), z.string());
@@ -78,6 +79,12 @@ const stripeWebhookSchema = z.object({
   prospect_id: z.string().optional(),
   client_id: z.string().optional(),
   paid_at: z.string().optional()
+}).strict();
+
+const workflowCallbackSchema = z.object({
+  event_id: z.string().min(1),
+  status: z.string().min(1),
+  details: z.string().optional()
 }).strict();
 
 export const apiRouter = Router();
@@ -226,6 +233,21 @@ apiRouter.post('/webhooks/stripe', async (req, res) => {
   }
 
   const result = await handleStripeWebhook(parsed.data);
+  return res.status(Number(result.status_code || 200)).json(result);
+});
+
+apiRouter.post('/webhooks/workflow-callback', (req, res) => {
+  const parsed = workflowCallbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, status_code: 400, error: parsed.error.flatten() });
+  }
+
+  const result = handleWorkflowCallback(
+    parsed.data,
+    String(req.header('x-webhook-signature') || ''),
+    String(req.header('x-webhook-timestamp') || ''),
+    getSettings()
+  );
   return res.status(Number(result.status_code || 200)).json(result);
 });
 

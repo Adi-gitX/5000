@@ -1,4 +1,38 @@
 import type { ModelGenerationResult, ProviderAttempt, SettingsMap } from '../types.js';
+import { buildId, parseNumber } from '../utils.js';
+import { traceModelExecution } from './telemetryService.js';
+
+type ProviderCircuitState = {
+  failures: number;
+  openUntilMs: number;
+};
+
+const providerCircuit = new Map<string, ProviderCircuitState>();
+
+function isCircuitOpen(provider: string): boolean {
+  const state = providerCircuit.get(provider);
+  if (!state) {
+    return false;
+  }
+  if (Date.now() >= state.openUntilMs) {
+    providerCircuit.set(provider, { failures: state.failures, openUntilMs: 0 });
+    return false;
+  }
+  return state.openUntilMs > Date.now();
+}
+
+function markProviderSuccess(provider: string): void {
+  providerCircuit.set(provider, { failures: 0, openUntilMs: 0 });
+}
+
+function markProviderFailure(provider: string, settings: SettingsMap): void {
+  const threshold = parseNumber(settings.MODEL_CB_FAILURE_THRESHOLD, 3);
+  const openSeconds = parseNumber(settings.MODEL_CB_OPEN_SECONDS, 120);
+  const existing = providerCircuit.get(provider) || { failures: 0, openUntilMs: 0 };
+  const failures = existing.failures + 1;
+  const openUntilMs = failures >= threshold ? Date.now() + openSeconds * 1000 : 0;
+  providerCircuit.set(provider, { failures, openUntilMs });
+}
 
 function extractOpenAIContent(payload: unknown): string {
   const maybe = payload as {
@@ -113,8 +147,14 @@ export async function generateTextWithFallback(
 ): Promise<ModelGenerationResult> {
   const chain = parseProviderChain(settings);
   const attempts: ProviderAttempt[] = [];
+  const requestId = buildId('AI');
 
   for (const provider of chain) {
+    if (isCircuitOpen(provider)) {
+      attempts.push({ provider, success: false, error: 'circuit_open' });
+      continue;
+    }
+
     try {
       if (provider === 'openclaw') {
         const apiKey = settings.OPENCLAW_API_KEY || '';
@@ -132,6 +172,15 @@ export async function generateTextWithFallback(
         });
 
         attempts.push({ provider, success: true });
+        markProviderSuccess(provider);
+        await traceModelExecution({
+          requestId,
+          provider,
+          promptLength: prompt.length,
+          success: true,
+          fallbackUsed: false,
+          settings
+        });
         return { text, providerUsed: provider, attempts, fallbackUsed: false };
       }
 
@@ -152,6 +201,15 @@ export async function generateTextWithFallback(
         });
 
         attempts.push({ provider, success: true });
+        markProviderSuccess(provider);
+        await traceModelExecution({
+          requestId,
+          provider,
+          promptLength: prompt.length,
+          success: true,
+          fallbackUsed: false,
+          settings
+        });
         return { text, providerUsed: provider, attempts, fallbackUsed: false };
       }
 
@@ -169,14 +227,34 @@ export async function generateTextWithFallback(
         });
 
         attempts.push({ provider, success: true });
+        markProviderSuccess(provider);
+        await traceModelExecution({
+          requestId,
+          provider,
+          promptLength: prompt.length,
+          success: true,
+          fallbackUsed: false,
+          settings
+        });
         return { text, providerUsed: provider, attempts, fallbackUsed: false };
       }
 
       attempts.push({ provider, success: false, error: 'Unknown provider' });
     } catch (error) {
+      markProviderFailure(provider, settings);
       attempts.push({ provider, success: false, error: String(error) });
     }
   }
+
+  await traceModelExecution({
+    requestId,
+    provider: 'fallback-template',
+    promptLength: prompt.length,
+    success: false,
+    fallbackUsed: true,
+    settings,
+    errorText: attempts.map((x) => `${x.provider}:${x.error || 'unknown'}`).join('; ')
+  });
 
   return {
     text: fallbackTemplate(prompt),

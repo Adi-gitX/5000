@@ -5,17 +5,19 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PORT } from './constants.js';
-import { initializeDatabase } from './db.js';
+import { getSettings, initializeDatabase } from './db.js';
 import { agentsRouter } from './routes/agents.js';
 import { apiRouter } from './routes/api.js';
 import { execRouter } from './routes/exec.js';
 import { startScheduler } from './scheduler.js';
+import { initializeTelemetry } from './services/telemetryService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, '..', 'public');
 
 initializeDatabase();
+void initializeTelemetry(getSettings());
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));

@@ -4,10 +4,12 @@ import { getSettings, isJobPaused, logJobRun } from './db.js';
 import {
   runDailyProspectingBatch,
   runFollowUpBatch,
+  runJobByName,
   runOutreachBatch,
   runPipelineDigest,
   runReplyTriage
 } from './services/automationService.js';
+import { captureException } from './services/telemetryService.js';
 import { parseBoolean } from './utils.js';
 
 export function startScheduler(): void {
@@ -24,6 +26,7 @@ export function startScheduler(): void {
       await fn();
     } catch (error) {
       logJobRun(jobKey, 'error', String(error));
+      captureException(error, { scheduler_job: jobKey });
       console.error(`[scheduler:${jobKey}]`, error);
     }
   };
@@ -32,5 +35,6 @@ export function startScheduler(): void {
   cron.schedule('10 * * * *', guarded('outreach', () => runOutreachBatch()));
   cron.schedule('20 * * * *', guarded('followups', () => runFollowUpBatch()));
   cron.schedule('*/10 * * * *', guarded('reply-triage', () => runReplyTriage()));
+  cron.schedule('*/15 * * * *', guarded('workflow-dispatch', () => runJobByName('workflow-dispatch')));
   cron.schedule('0 21 * * *', guarded('digest', () => runPipelineDigest()));
 }
