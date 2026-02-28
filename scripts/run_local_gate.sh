@@ -18,6 +18,15 @@ echo "Running local launch gate checks..."
 node --check --input-type=commonjs < apps-script/Code.gs || fail "Code.gs syntax check failed"
 pass "Code.gs syntax check"
 
+npm run -s lint:check || fail "TypeScript typecheck failed"
+pass "TypeScript typecheck"
+
+./scripts/smoke_api.sh >/tmp/survival-cash-engine-gate-smoke.log 2>&1 || {
+  cat /tmp/survival-cash-engine-gate-smoke.log >&2
+  fail "Smoke API test failed"
+}
+pass "Smoke API test"
+
 required_files=(
   "apps-script/Code.gs"
   "apps-script/appsscript.json"
@@ -26,6 +35,17 @@ required_files=(
   "docs/LAUNCH_MONITORING_ROLLBACK.md"
   "docs/RELEASE_NOTES_v0.1.md"
   "docs/BASELINE_ARTIFACTS.md"
+  "docs/PROTOTYPE_ARCHITECTURE.md"
+  "docs/N8N_MAKE_INTEGRATION.md"
+  "docs/MODEL_ROUTER.md"
+  "docker-compose.yml"
+  "Dockerfile"
+  "public/index.html"
+  "public/app.js"
+  "src/index.ts"
+  "src/routes/api.ts"
+  "src/services/automationService.ts"
+  "scripts/smoke_api.sh"
   "tests/TEST_SCENARIOS.md"
   "templates/webhook_reply_payload.json"
   "templates/webhook_stripe_payload.json"
@@ -66,9 +86,10 @@ pass "Release notes commit hash"
 
 cat <<'TXT'
 [MANUAL CHECKS REQUIRED]
-- Run setupSystem(), createOrResetTriggers(), and runSmokeChecks() in Google Apps Script UI.
-- Validate webhook endpoints with relay against /exec?route=reply-hook and /exec?route=stripe-webhook.
+- Start prototype service (`npm run dev` or `npm run start`) and validate dashboard workflows.
+- Validate API webhook endpoints `/api/webhooks/reply` and `/api/webhooks/stripe` with real relay.
 - Execute docs/PROD_CUTOVER_CHECKLIST.md before setting DRY_RUN=FALSE.
+- Optional alternate path: validate Apps Script deployment if using `apps-script/`.
 TXT
 
 pass "Local launch gate complete"

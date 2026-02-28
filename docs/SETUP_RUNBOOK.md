@@ -1,137 +1,89 @@
-# Setup Runbook
+# Setup Runbook (Prototype Product)
 
-## 1) Create Base Assets
-1. Create one Google Sheet.
-2. Add Apps Script project via Extensions -> Apps Script.
-3. Copy in:
-   - `apps-script/Code.gs`
-   - `apps-script/appsscript.json`
-4. Save and authorize.
+## 1) Local Boot
+1. `cp .env.example .env`
+2. Fill required keys in `.env`:
+   - `OPERATOR_EMAIL`
+   - `CALENDLY_LINK`
+   - `STRIPE_DEPOSIT_LINK`
+   - `STRIPE_WEBHOOK_TOKEN`
+3. Install dependencies: `npm install`
+4. Start app: `npm run dev`
+5. Open dashboard: `http://localhost:8787`
 
-## 2) Initialize Sheets
-Run `setupSystem()` once.
-
-It creates:
-- `prospects`
-- `outreach_log`
-- `deals`
-- `payments`
-- `delivery`
-- `settings`
-- `lead_intake`
-- `replies_inbox`
-
-## 3) Configure Settings
-Update values in `settings` sheet.
-
-Required at launch:
-- `OPERATOR_EMAIL`
-- `CALENDLY_LINK`
-- `STRIPE_DEPOSIT_LINK`
-- `STRIPE_WEBHOOK_TOKEN`
-- `DRY_RUN` (keep `TRUE` through validation)
-
-Conservative defaults (already seeded):
+## 2) Configure Settings in UI
+In dashboard Settings, verify conservative defaults:
+- `DRY_RUN=TRUE`
 - `MAX_SENDS_PER_HOUR=20`
 - `WARMUP_DAILY_LIMIT=80`
 - `QUIET_HOURS_START=20`
 - `QUIET_HOURS_END=08`
 - `DEFAULT_OWNER_TZ=America/New_York`
-- `PIVOT_REPLY_RATE_FLOOR=0.01`
 
-## 4) Schema Notes
-### `prospects`
-Includes safety fields:
-- `optout_at`
-- `do_not_contact_reason`
-- `last_error`
+Add optional integrations:
+- `N8N_WEBHOOK_URL`
+- `MAKE_WEBHOOK_URL`
+- SMTP config (`SMTP_*`) for real sending
+- model provider keys for OpenClaw/OpenAI/Anthropic
 
-### `outreach_log`
-Includes delivery telemetry:
-- `delivery_status`
-- `error_code`
-- `message_id`
+## 3) Validate Locally
+Run:
+- `./scripts/run_local_gate.sh`
 
-### Suppression statuses
-- `suppressed_optout`
-- `suppressed_bounce`
+Then in dashboard:
+1. Insert sample intake rows.
+2. Click `Promote Intake to Leads`.
+3. Trigger jobs in order:
+   - `Run Prospecting Batch`
+   - `Run Outreach Batch`
+   - `Run Reply Triage`
+4. Verify logs and metrics update.
 
-Suppressed rows are excluded from all outreach jobs.
+## 4) Connect n8n / Make
+### n8n
+- Start n8n (`docker compose up`) or hosted n8n.
+- Build workflows that receive `{event_name, payload}`.
+- Set `N8N_WEBHOOK_URL` in settings.
 
-## 5) Seed and Promote Leads
-1. Paste prospects into `lead_intake`.
-2. Required intake fields:
-   - `business_name`
-   - `email`
-3. Run `runDailyProspectingBatch()`.
-4. Confirm new rows in `prospects` with `status=ready`.
+### Make
+- Create webhook scenario.
+- Set `MAKE_WEBHOOK_URL` in settings.
 
-## 6) Validate Before Live Send
-1. Keep `DRY_RUN=TRUE`.
-2. Run local gate in terminal:
-   - `./scripts/run_local_gate.sh`
-3. In Apps Script, run:
-   - `runSmokeChecks()`
-4. Then run:
-   - `runOutreachBatch()`
-   - `runFollowUpBatch()`
-   - `runReplyTriage()`
-5. Verify in `outreach_log`:
-   - `delivery_status` populated
-   - `message_id` populated
-   - errors mapped to `error_code`
-6. Execute scenarios in `tests/TEST_SCENARIOS.md`.
+Use dispatch test from dashboard (`Integration Dispatch Test`) to validate both.
 
-## 7) Create Triggers
-Run `createOrResetTriggers()`.
-
-Created schedule:
-- `runDailyProspectingBatch`: every 6 hours
-- `runOutreachBatch`: hourly
-- `runFollowUpBatch`: hourly
-- `runReplyTriage`: hourly
-- `runPipelineDigest`: daily at 9 PM script timezone
-
-## 8) Deploy Web App + Webhooks
-1. Apps Script -> Deploy -> New deployment -> Web app.
-2. Execute as: your account.
-3. Access: anyone with link (or restricted behind relay).
-4. Optional scripted push path:
-   - `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`
-
-Use query-based routes:
-- `https://script.google.com/.../exec?route=stripe-webhook`
-- `https://script.google.com/.../exec?route=reply-hook`
-
-Optional terminal replay test:
-- `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
-
-### Stripe webhook required JSON keys
-- `webhook_token`
-- `event_id`
-- `payment_id`
-- `amount`
-- `status`
-
-### Reply webhook required JSON keys
+## 5) Webhook Contracts
+### Reply webhook
+`POST /api/webhooks/reply`
+Required JSON fields:
 - `reply_id`
 - `email`
 - `body`
 - `received_at`
 - `message_id`
 
-Both endpoints return JSON with:
+### Stripe webhook
+`POST /api/webhooks/stripe`
+Required JSON fields:
+- `webhook_token`
+- `event_id`
+- `payment_id`
+- `amount`
+- `status`
+
+Both return:
 - `ok`
 - `status_code`
 - optional `duplicate`
 - optional `error`
 
-## 9) Production Cutover
+## 6) Production Cutover
 1. Complete `docs/PROD_CUTOVER_CHECKLIST.md`.
 2. Set `DRY_RUN=FALSE`.
-3. Run first controlled wave and monitor digest.
+3. Start controlled wave and monitor first 2 hours.
+4. Follow `docs/LAUNCH_MONITORING_ROLLBACK.md` for pause/rollback.
 
-## 10) Known Constraints
-- Gmail does not provide reliable open-rate telemetry by default.
-- LinkedIn DM send remains manual by design; use templates in `templates/`.
-- Stripe signature header verification is not native in this script; secure relay + token gate is used.
+## 7) Optional Apps Script Path
+If you want Google Apps Script deployment as alternate backend, use:
+- `apps-script/Code.gs`
+- `apps-script/appsscript.json`
+- `./scripts/deploy_with_clasp.sh`

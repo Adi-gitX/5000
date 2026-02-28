@@ -1,83 +1,85 @@
-# 72-Hour Survival Cash Engine
+# Survival Cash Engine - Complete Working Prototype
 
-A deployable Google Sheets + Google Apps Script system to run:
-- lead intake and dedupe
-- cold outreach and timed follow-ups
-- reply triage with suppression handling
-- Stripe payment webhook ingestion with idempotency
-- onboarding task creation
-- daily pipeline digest
+Production-oriented prototype product with:
+- orchestration backend (Node + TypeScript + SQLite)
+- small frontend control panel
+- model routing (OpenClaw/OpenAI/Anthropic with fallback)
+- webhook contracts for replies and payments
+- n8n and Make dispatch integration
+- automated job scheduler with conservative compliance limits
 
-This implementation is configured for a compliant conservative launch profile.
+## What You Get
+- Fully runnable app at `http://localhost:8787`
+- Dashboard to manage settings, leads, jobs, metrics, logs
+- Endpoints to integrate email/reply/payment workflows
+- Launch governance docs (cutover, monitoring, rollback)
 
-## Stack
-- CRM/data: Google Sheets
-- Automation: Google Apps Script
-- Messaging: Gmail + LinkedIn (manual DM execution)
-- Payments: Stripe payment links + webhook relay
-- Scheduling: Calendly link in templates
+## Project Structure
+- `src/`: backend API + job engine + model router
+- `public/`: frontend dashboard (no build step)
+- `scripts/`: local gate, webhook replay, clasp deploy helper
+- `docs/`: setup, cutover, rollback, week-1 ops
+  - `docs/PROTOTYPE_ARCHITECTURE.md`
+  - `docs/N8N_MAKE_INTEGRATION.md`
+  - `docs/MODEL_ROUTER.md`
+- `apps-script/`: Google Apps Script implementation (legacy/alternate path)
 
-## What Is Included
-- `apps-script/Code.gs`: full automation logic and guardrails
-- `apps-script/appsscript.json`: Apps Script manifest and scopes
-- `docs/SETUP_RUNBOOK.md`: deployment, cutover, and webhook contract
-- `docs/72H_EXECUTION_CHECKLIST.md`: first 72-hour operating checklist
-- `docs/WEEK1_OPS_PLAYBOOK.md`: day-by-day week-1 cadence
-- `docs/PROD_CUTOVER_CHECKLIST.md`: dry-run to production cutover gate
-- `docs/LAUNCH_MONITORING_ROLLBACK.md`: pause criteria, recovery, rollback flow
-- `docs/RELEASE_NOTES_v0.1.md`: launch candidate release notes and contracts
-- `docs/BASELINE_ARTIFACTS.md`: frozen artifact list and checksums
-- `docs/OFFER_ONE_PAGER.md`: one-page offer spec
-- `docs/SALES_CALL_SCRIPT.md`: close script for calls
-- `tests/TEST_SCENARIOS.md`: acceptance checks mapped to plan
-- `templates/`: outreach templates and webhook payload examples
-- `scripts/run_local_gate.sh`: local launch gate checks
-- `scripts/replay_webhooks.sh`: sample webhook replay against deployed web app
-- `scripts/deploy_with_clasp.sh`: optional scripted push/deploy for Apps Script
+## Quick Start (Local)
+1. Install dependencies:
+   - `npm install`
+2. Create env file:
+   - `cp .env.example .env`
+3. Run app:
+   - `npm run dev`
+4. Open dashboard:
+   - `http://localhost:8787`
+5. Run local launch gate:
+   - `./scripts/run_local_gate.sh`
 
-## Core Functions
-- `runDailyProspectingBatch()`
-- `runOutreachBatch()`
-- `runFollowUpBatch()`
-- `runReplyTriage()`
-- `runPipelineDigest()`
-- `doPost()` with routes: `stripe-webhook`, `reply-hook`
+## Docker + n8n
+1. Ensure `.env` exists.
+2. Start stack:
+   - `docker compose up --build`
+3. App:
+   - `http://localhost:8787`
+4. n8n:
+   - `http://localhost:5678`
 
-## Key Hardening Implemented
-- suppression statuses:
+## Core API Endpoints
+- `GET /api/health`
+- `GET /api/settings`, `PUT /api/settings`
+- `GET /api/leads`, `POST /api/leads`
+- `POST /api/lead-intake`, `POST /api/lead-intake/bulk`, `POST /api/lead-intake/promote`
+- `POST /api/jobs/:jobName` (`prospecting|outreach|followups|reply-triage|digest`)
+- `POST /api/webhooks/reply`
+- `POST /api/webhooks/stripe`
+- `POST /api/integrations/dispatch`
+- `POST /api/agent/generate`
+
+## Required Webhook Contracts
+- Reply webhook: `reply_id, email, body, received_at, message_id`
+- Stripe webhook: `webhook_token, event_id, payment_id, amount, status`
+- Response contract: `{ ok, status_code, duplicate?, error? }`
+
+## Automation Safety Defaults
+- `DRY_RUN=TRUE` until cutover complete
+- `MAX_SENDS_PER_HOUR=20`
+- `WARMUP_DAILY_LIMIT=80`
+- quiet-hours guard with timezone fallback
+- terminal suppression statuses:
   - `suppressed_optout`
   - `suppressed_bounce`
-- schema extensions:
-  - `prospects`: `optout_at`, `do_not_contact_reason`, `last_error`
-  - `outreach_log`: `delivery_status`, `error_code`, `message_id`
-  - `settings`: `MAX_SENDS_PER_HOUR`, `WARMUP_DAILY_LIMIT`, `QUIET_HOURS_START`, `QUIET_HOURS_END`, `DEFAULT_OWNER_TZ`
-- strict webhook required fields and JSON response contract with `status_code`
-- per-hour and warmup daily send limit enforcement
-- quiet-hours send guard (default US Eastern)
 
-## Quick Start
-1. Create a Google Sheet named `Survival Cash Engine`.
-2. Open Extensions -> Apps Script and paste:
-   - `apps-script/Code.gs`
-   - `apps-script/appsscript.json`
-3. Run `setupSystem()` once.
-4. Fill `settings` sheet values:
-   - `OPERATOR_EMAIL`
-   - `CALENDLY_LINK`
-   - `STRIPE_DEPOSIT_LINK`
-   - `STRIPE_WEBHOOK_TOKEN`
-   - keep `DRY_RUN=TRUE` for validation
-5. Run `createOrResetTriggers()`.
-6. Load leads into `lead_intake`, then run `runDailyProspectingBatch()`.
-7. Run local gate script: `./scripts/run_local_gate.sh`.
-8. Validate with `runSmokeChecks()` and test scenarios in `tests/TEST_SCENARIOS.md`.
-9. Deploy as web app and configure relay routes:
-   - `.../exec?route=stripe-webhook`
-   - `.../exec?route=reply-hook`
-10. Switch `DRY_RUN` to `FALSE` only after cutover checklist passes.
-11. Optional endpoint sanity check:
-    - `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
-12. Optional scripted Apps Script push:
-    - `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`
+## Launch Docs
+- Setup: `docs/SETUP_RUNBOOK.md`
+- Cutover gate: `docs/PROD_CUTOVER_CHECKLIST.md`
+- Monitoring + rollback: `docs/LAUNCH_MONITORING_ROLLBACK.md`
+- Week-1 operations: `docs/WEEK1_OPS_PLAYBOOK.md`
+- Baseline artifacts: `docs/BASELINE_ARTIFACTS.md`
+- Release notes: `docs/RELEASE_NOTES_v0.1.md`
 
-Detailed setup is in `docs/SETUP_RUNBOOK.md`.
+## Helper Scripts
+- `./scripts/run_local_gate.sh`
+- `./scripts/smoke_api.sh`
+- `WEBAPP_URL='https://script.google.com/.../exec' ./scripts/replay_webhooks.sh`
+- `SCRIPT_ID='AKfycb...' ./scripts/deploy_with_clasp.sh`

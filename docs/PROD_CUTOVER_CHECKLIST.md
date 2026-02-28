@@ -3,32 +3,37 @@
 All checks below must pass before `DRY_RUN=FALSE`.
 
 ## A) Core Validation
-- [ ] `runSmokeChecks()` returns zero failures
+- [ ] `./scripts/run_local_gate.sh` passes
 - [ ] 5-row dry-run renders correct personalization
-- [ ] `outreach_log` receives `delivery_status` and `message_id`
-- [ ] invalid email maps to `suppressed_bounce` and `error_code`
+- [ ] `outreach_log` shows `delivery_status` and `message_id`
+- [ ] invalid email maps to `suppressed_bounce` with `error_code`
 
 ## B) Suppression & Compliance
-- [ ] positive reply stops follow-up (`next_touch_at` cleared)
+- [ ] positive reply clears follow-up scheduling
 - [ ] opt-out reply sets:
   - `status=suppressed_optout`
   - `optout_at` populated
   - `do_not_contact_reason=user_optout`
-- [ ] suppressed rows are skipped by outreach jobs
-- [ ] quiet-hours logic blocks sends in configured window
+- [ ] suppressed rows are never re-sent
+- [ ] quiet-hours guard blocks sends in configured windows
 
 ## C) Webhook Contracts
-- [ ] `/exec?route=reply-hook` rejects missing required fields
-- [ ] `/exec?route=stripe-webhook` rejects missing required fields
-- [ ] duplicate `reply_id` handled idempotently
-- [ ] duplicate `event_id` handled idempotently
+- [ ] `/api/webhooks/reply` rejects missing required fields
+- [ ] `/api/webhooks/stripe` rejects missing required fields
+- [ ] duplicate `reply_id` returns `duplicate=true`
+- [ ] duplicate `event_id` returns `duplicate=true`
 
-## D) KPI and Operations
-- [ ] `runPipelineDigest()` sends operator email successfully
-- [ ] daily and hourly caps produce expected throttling
-- [ ] trigger set exists for all scheduled jobs
+## D) Integrations
+- [ ] n8n dispatch test succeeds (if configured)
+- [ ] Make dispatch test succeeds (if configured)
+- [ ] SMTP sending succeeds or DRY_RUN mode intentionally retained
 
-## E) Go-Live Action
+## E) KPI and Operations
+- [ ] digest job runs and includes sends/replies/cash totals
+- [ ] hourly and daily caps enforce expected throttling
+- [ ] scheduler executes jobs on cadence
+
+## F) Go-Live Action
 - [ ] set `DRY_RUN=FALSE`
-- [ ] run first controlled wave
-- [ ] monitor first 2 hours of logs for send errors and suppression behavior
+- [ ] run first controlled outreach wave
+- [ ] monitor first 2 hours for failures and invalid transitions

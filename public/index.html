@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Survival Cash Engine - Prototype</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Survival Cash Engine</h1>
+      <p>Production-grade automation prototype with n8n/Make + model routing.</p>
+      <div id="statusBadge" class="badge">Loading...</div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Live Metrics</h2>
+        <div id="metricsGrid" class="grid metrics"></div>
+      </section>
+
+      <section class="card">
+        <h2>Control Actions</h2>
+        <div class="actions">
+          <button data-job="prospecting">Run Prospecting Batch</button>
+          <button data-job="outreach">Run Outreach Batch</button>
+          <button data-job="followups">Run Follow-ups</button>
+          <button data-job="reply-triage">Run Reply Triage</button>
+          <button data-job="digest">Run Pipeline Digest</button>
+          <button id="refreshAll">Refresh Dashboard</button>
+        </div>
+      </section>
+
+      <section class="card two-col">
+        <div>
+          <h2>Settings</h2>
+          <form id="settingsForm" class="form-grid"></form>
+          <button id="saveSettings">Save Settings</button>
+        </div>
+
+        <div>
+          <h2>Add Lead</h2>
+          <form id="leadForm" class="form-grid compact">
+            <input name="business_name" placeholder="Business Name" required />
+            <input name="email" type="email" placeholder="Email" required />
+            <input name="niche" placeholder="Niche (med spa/dental)" />
+            <input name="city" placeholder="City" />
+            <input name="website" placeholder="Website" />
+            <input name="linkedin_url" placeholder="LinkedIn URL" />
+            <input name="pain_signal" placeholder="Pain Signal" />
+            <input name="owner" placeholder="Owner / Timezone" />
+            <button type="submit">Create Lead</button>
+          </form>
+
+          <h3>Bulk Intake (CSV lines)</h3>
+          <p class="hint">Format per line: business_name,email,niche,city,pain_signal</p>
+          <textarea id="bulkCsv" rows="6" placeholder="Glow Med Spa,owner@glow.com,med spa,Austin,No booking CTA"></textarea>
+          <div class="actions">
+            <button id="bulkImport">Insert Intake Rows</button>
+            <button id="promoteIntake">Promote Intake to Leads</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card two-col">
+        <div>
+          <h2>Agent Playground</h2>
+          <textarea id="agentPrompt" rows="6" placeholder="Write a tailored first-touch message for a Dallas dental clinic with stale lead follow-up."></textarea>
+          <div class="actions">
+            <button id="generateAgent">Generate</button>
+          </div>
+          <pre id="agentOutput"></pre>
+        </div>
+
+        <div>
+          <h2>Integration Dispatch Test</h2>
+          <input id="integrationEvent" placeholder="Event name" value="manual_test" />
+          <textarea id="integrationPayload" rows="6" placeholder='{"source":"dashboard"}'></textarea>
+          <div class="actions">
+            <button id="dispatchIntegration">Send to n8n/Make</button>
+          </div>
+          <pre id="integrationOutput"></pre>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Leads</h2>
+        <div class="table-wrap">
+          <table id="leadsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Business</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Next Touch</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card two-col">
+        <div>
+          <h2>Outreach Log</h2>
+          <div class="table-wrap">
+            <table id="outreachTable">
+              <thead>
+                <tr>
+                  <th>Lead</th>
+                  <th>Step</th>
+                  <th>Status</th>
+                  <th>Error</th>
+                  <th>At</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h2>Job Runs</h2>
+          <div class="table-wrap">
+            <table id="jobsTable">
+              <thead>
+                <tr>
+                  <th>Job</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                  <th>At</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Webhook Endpoints</h2>
+        <ul>
+          <li>Reply: <code>/api/webhooks/reply</code></li>
+          <li>Stripe: <code>/api/webhooks/stripe</code></li>
+          <li>n8n/Make dispatch: <code>/api/integrations/dispatch</code></li>
+        </ul>
+      </section>
+    </main>
+
+    <div id="toast"></div>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    container_name: survival-cash-engine
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: 8787
+      DB_PATH: /app/data/prototype.db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - n8n
+
+  n8n:
+    image: n8nio/n8n:1.83.2
+    container_name: survival-cash-engine-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - TZ=America/New_York
+      - GENERIC_TIMEZONE=America/New_York
+    volumes:
+      - ./.n8n:/home/node/.n8n

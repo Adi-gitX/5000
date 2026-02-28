@@ -1,38 +1,33 @@
-# 72-Hour Execution Checklist (Conservative Profile)
+# 72-Hour Execution Checklist (Prototype Product)
 
 ## Hour 0-6
-- [ ] Publish offer one-pager
-- [ ] Create Stripe links (deposit + full)
-- [ ] Configure Calendly 15-min fit check
-- [ ] Deploy Apps Script and run `setupSystem()`
-- [ ] Set required `settings` values
+- [ ] Configure `.env` and launch app + dashboard
+- [ ] Connect Stripe deposit link and Calendly link
 - [ ] Keep `DRY_RUN=TRUE`
+- [ ] Validate with `./scripts/run_local_gate.sh`
 
 ## Hour 6-12
-- [ ] Load first 150 high-quality leads into `lead_intake`
-- [ ] Run `runDailyProspectingBatch()`
-- [ ] Run dry-run send test for 5 rows
-- [ ] Verify message rendering and log telemetry (`delivery_status`, `message_id`)
+- [ ] Insert first 150 qualified leads via bulk intake
+- [ ] Promote intake to active leads
+- [ ] Run dry-run outreach and verify logs
 
 ## Hour 12-24
-- [ ] Set `DRY_RUN=FALSE` only after passing `docs/PROD_CUTOVER_CHECKLIST.md`
-- [ ] Launch controlled outbound wave
-- [ ] Respect `MAX_SENDS_PER_HOUR` and `WARMUP_DAILY_LIMIT`
-- [ ] Send first LinkedIn DM batch manually from template
+- [ ] Complete cutover checklist
+- [ ] Set `DRY_RUN=FALSE`
+- [ ] Run first controlled wave within caps
+- [ ] Dispatch integration test to n8n/Make
 
 ## Hour 24-36
-- [ ] Verify follow-up cadence only targets non-suppressed records
-- [ ] Triage inbound replies with `runReplyTriage()`
-- [ ] Prioritize positive replies for calls within 2 hours
+- [ ] Run followups and reply triage on schedule
+- [ ] Route positive replies to booking + payment flow
+- [ ] Confirm opt-outs and bounces stay suppressed
 
 ## Hour 36-60
-- [ ] Run all booked calls using fixed script
-- [ ] Collect deposits on call via Stripe link
-- [ ] Verify webhook ingestion and idempotency in `payments`
-- [ ] Confirm onboarding rows created in `delivery`
+- [ ] Close calls with one-package script
+- [ ] Confirm payment webhook ingestion and delivery row creation
+- [ ] Track real-time cash in metrics panel
 
 ## Hour 60-72
-- [ ] Deliver first workflows to paid clients
-- [ ] Capture quick-win proof and request referral intro
-- [ ] Run second wave for warm leads
-- [ ] Review 9 PM digest and confirm collected cash total
+- [ ] Deploy second wave to warm leads
+- [ ] Capture quick-win evidence for referrals
+- [ ] Review digest + conversion metrics and adjust targeting
