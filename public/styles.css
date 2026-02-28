@@ -90,6 +90,12 @@ h3 {
   gap: 8px;
 }
 
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 button {
   border: 0;
   border-radius: 8px;
@@ -101,6 +107,22 @@ button {
 
 button:hover {
   filter: brightness(0.94);
+}
+
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: white;
+  color: #0f766e;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn-link:hover {
+  filter: brightness(0.96);
 }
 
 .form-grid {
@@ -191,6 +213,10 @@ pre {
 
 .status-bad {
   color: var(--danger);
+}
+
+.agents-page header .actions {
+  margin-bottom: 10px;
 }
 
 @media (max-width: 700px) {

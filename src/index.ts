@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { PORT } from './constants.js';
 import { initializeDatabase } from './db.js';
+import { agentsRouter } from './routes/agents.js';
 import { apiRouter } from './routes/api.js';
 import { execRouter } from './routes/exec.js';
 import { startScheduler } from './scheduler.js';
@@ -22,6 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(publicDir));
 
 app.use('/api', apiRouter);
+app.use('/api/agents', agentsRouter);
 app.use('/exec', execRouter);
 
 app.get('/api', (_req, res) => {
