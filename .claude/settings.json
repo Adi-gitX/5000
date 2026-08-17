@@ -1,0 +1,10 @@
+{
+  "enabledMcpjsonServers": [
+    "envcore_gateway",
+    "user_analysis",
+    "deployer",
+    "support",
+    "cortex_debugger",
+    "redash"
+  ]
+}
