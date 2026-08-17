@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "envcore_gateway": {
+      "serverUrl": "http://envcore.int-worker.emergentagent.com/api/v1/env/gateway"
+    },
+    "user_analysis": {
+      "serverUrl": "http://agent-service.cloudrun.internal.prod.emergentagent.com/user-analysis/mcp/"
+    },
+    "deployer": {
+      "serverUrl": "http://deployer-mcp.internal-apps.emergentagent.com/mcp"
+    },
+    "support": {
+      "serverUrl": "http://support-mcp.internal-apps.emergentagent.com"
+    },
+    "cortex_debugger": {
+      "serverUrl": "http://cortex-debugger.int.apis.emergentagent.com"
+    }
+  }
+}
