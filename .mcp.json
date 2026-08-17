@@ -10,21 +10,21 @@
     },
     "deployer": {
       "type": "http",
-      "url": "https://deployer-mcp.internal-apps.emergentagent.com/mcp"
+      "url": "http://deployer-mcp.internal-apps.emergentagent.com/mcp"
     },
     "support": {
       "type": "http",
-      "url": "https://support-mcp.internal-apps.emergentagent.com"
+      "url": "http://support-mcp.internal-apps.emergentagent.com"
     },
     "cortex_debugger": {
       "type": "http",
-      "url": "https://cortex-debugger.int.apis.emergentagent.com"
+      "url": "http://cortex-debugger.int.apis.emergentagent.com"
     },
     "redash": {
       "command": "uvx",
       "args": ["redash-mcp"],
       "env": {
-        "REDASH_URL": "https://redash.internal-apps.emergentagent.com",
+        "REDASH_URL": "http://redash.internal-apps.emergentagent.com",
         "REDASH_API_KEY": "${REDASH_API_KEY}"
       }
     }
